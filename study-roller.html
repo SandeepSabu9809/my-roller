@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0a0f">  
+    <title>Study Roller</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --ds-color: #f97316;
+            --se-color: #22d3ee;
+            --df-color: #a78bfa;
+            --math-color: #4ade80;
+            --bg: #0a0a0f;
+            --card-bg: #13131a;
+            --border: rgba(255,255,255,0.07);
+            --text: #f0f0f0;
+            --muted: rgba(255,255,255,0.35);
+        }
+
+        body {
+            min-height: 100svh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Poppins', monospace;
+            padding: 16px;
+            overflow: hidden;
+        }
+
+        /* Ambient glow blobs */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::before {
+            width: 300px; height: 300px;
+            background: var(--ds-color);
+            top: -80px; left: -80px;
+        }
+        body::after {
+            width: 300px; height: 300px;
+            background: var(--math-color);
+            bottom: -80px; right: -80px;
+        }
+
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(1.4rem, 5vw, 2rem);
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        header p {
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-top: 4px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+            transition: border-color 0.3s;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 16px 16px 0 0;
+        }
+
+        .card:nth-child(1) { --accent: var(--ds-color); }
+        .card:nth-child(2) { --accent: var(--se-color); }
+        .card:nth-child(3) { --accent: var(--df-color); }
+        .card:nth-child(4) { --accent: var(--math-color); }
+
+        .card:nth-child(1) .label { color: var(--ds-color); }
+        .card:nth-child(2) .label { color: var(--se-color); }
+        .card:nth-child(3) .label { color: var(--df-color); }
+        .card:nth-child(4) .label { color: var(--math-color); }
+
+        .card:nth-child(1) .roll-btn { --btn-color: var(--ds-color); }
+        .card:nth-child(2) .roll-btn { --btn-color: var(--se-color); }
+        .card:nth-child(3) .roll-btn { --btn-color: var(--df-color); }
+        .card:nth-child(4) .roll-btn { --btn-color: var(--math-color); }
+
+        .label {
+            font-size: 0.6rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .topic-display {
+            min-height: 56px;
+            display: flex;
+            align-items: center;
+        }
+
+        .topic-text {
+            font-family: 'Syne', sans-serif;
+            font-size: clamp(0.85rem, 2.8vw, 1rem);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.25;
+            transition: opacity 0.15s ease;
+        }
+
+        .topic-text.flash {
+            opacity: 0;
+        }
+
+        .topic-placeholder {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .roll-btn {
+            width: 100%;
+            padding: 10px 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 1px solid var(--btn-color);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--btn-color);
+            transition: background 0.2s, color 0.2s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .roll-btn:hover {
+            background: var(--btn-color);
+            color: #0a0a0f;
+        }
+
+        .roll-btn:active {
+            transform: scale(0.96);
+        }
+
+        .roll-btn.rolling {
+            background: var(--btn-color);
+            color: #0a0a0f;
+        }
+
+        /* Roll All button */
+        .roll-all-wrap {
+            margin-top: 14px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .roll-all-btn {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            padding: 12px 32px;
+            border-radius: 100px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+            color: var(--text);
+            transition: background 0.2s, border-color 0.2s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .roll-all-btn:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .roll-all-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* Dice icon spin */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .spinning { animation: spin 0.3s ease; }
+    </style>
+</head>
+<body>
+
+<div class="wrapper">
+    <header>
+        <h1>Study Roller</h1>
+        <p>Tap to randomise a topic</p>
+    </header>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="roll-all-wrap">
+        <button class="roll-all-btn" onclick="rollAll()">⚄ Roll All</button>
+    </div>
+</div>
+
+<script>
+    const subjects = [
+        {
+            label: "Data Structures",
+            topics: [
+                "1", "2", "3", "4", "5"
+            ]
+        },
+        {
+            label: "Software Engineering",
+            topics: [
+               "1", "2", "3", "4", "5"
+            ]
+        },
+        {
+            label: "Digital Fundamentals",
+            topics: [
+                "1", "2", "3", "4", "5"
+            ]
+        },
+        {
+            label: "Maths",
+            topics: [
+                "1", "2", "3", "4", "5"
+            ]
+        }
+    ];
+
+    function buildGrid() {
+        const grid = document.getElementById('grid');
+        subjects.forEach((subj, i) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="label">${subj.label}</div>
+                <div class="topic-display">
+                    <span class="topic-text topic-placeholder" id="topic-${i}">— tap roll —</span>
+                </div>
+                <button class="roll-btn" onclick="rollCard(${i})">Roll ⚄</button>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function rollCard(index) {
+        const topicEl = document.getElementById(`topic-${index}`);
+        const btn = document.querySelectorAll('.roll-btn')[index];
+        const topics = subjects[index].topics;
+
+        btn.classList.add('rolling');
+        topicEl.classList.add('flash');
+        topicEl.classList.remove('topic-placeholder');
+
+        setTimeout(() => {
+            const pick = topics[Math.floor(Math.random() * topics.length)];
+            topicEl.textContent = pick;
+            topicEl.classList.remove('flash');
+            btn.classList.remove('rolling');
+        }, 150);
+    }
+
+    function rollAll() {
+        subjects.forEach((_, i) => {
+            setTimeout(() => rollCard(i), i * 80);
+        });
+    }
+
+    buildGrid();
+</script>
+
+</body>
+</html>
