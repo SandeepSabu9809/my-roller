@@ -242,8 +242,6 @@
 </div>
 
 <script>
-    const NO_REPEAT_COUNT = 5; // won't repeat same topic for this many rolls
-
     const subjects = [
         {
             label: "Data Structures",
@@ -263,26 +261,29 @@
         }
     ];
 
-    // Per-subject recent history (circular buffer of last NO_REPEAT_COUNT picks)
-    const history = subjects.map(() => []);
+    // Per-subject shuffled deck queue
+    const queues = subjects.map(() => []);
+
+    function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
 
     function pickTopic(index) {
         const topics = subjects[index].topics;
-        const recent = history[index];
+        let queue = queues[index];
 
-        // If the subject has too few topics to avoid repeats, just pick randomly
-        const available = topics.length > NO_REPEAT_COUNT
-            ? topics.filter(t => !recent.includes(t))
-            : topics.filter(t => t !== recent[recent.length - 1]); // at minimum avoid immediate repeat
+        // Refill when empty (reshuffle entire deck)
+        if (queue.length === 0) {
+            queues[index] = shuffle(topics);
+            queue = queues[index];
+        }
 
-        const pool = available.length > 0 ? available : topics;
-        const pick = pool[Math.floor(Math.random() * pool.length)];
-
-        // Push to history, keep only last NO_REPEAT_COUNT entries
-        recent.push(pick);
-        if (recent.length > NO_REPEAT_COUNT) recent.shift();
-
-        return pick;
+        return queue.shift(); // take next from front of shuffled deck
     }
 
     function buildGrid() {
