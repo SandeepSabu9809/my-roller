@@ -35,7 +35,6 @@
             overflow: hidden;
         }
 
-        /* Ambient glow blobs */
         body::before, body::after {
             content: '';
             position: fixed;
@@ -189,7 +188,6 @@
             color: #0a0a0f;
         }
 
-        /* Roll All button */
         .roll-all-wrap {
             margin-top: 14px;
             display: flex;
@@ -221,7 +219,6 @@
             transform: scale(0.97);
         }
 
-        /* Dice icon spin */
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -245,32 +242,48 @@
 </div>
 
 <script>
+    const NO_REPEAT_COUNT = 5; // won't repeat same topic for this many rolls
+
     const subjects = [
         {
             label: "Data Structures",
-            topics: [
-                "1", "2", "3", "4", "5"
-            ]
+            topics: ["1", "2", "3", "4", "5"]
         },
         {
             label: "Software Engineering",
-            topics: [
-               "1", "2", "3", "4", "5"
-            ]
+            topics: ["1", "2", "3", "4", "5"]
         },
         {
             label: "Digital Fundamentals",
-            topics: [
-                "1", "2", "3", "4", "5"
-            ]
+            topics: ["1", "2", "3", "4", "5"]
         },
         {
             label: "Maths",
-            topics: [
-                "1", "2", "3", "4", "5"
-            ]
+            topics: ["1", "2", "3", "4", "5"]
         }
     ];
+
+    // Per-subject recent history (circular buffer of last NO_REPEAT_COUNT picks)
+    const history = subjects.map(() => []);
+
+    function pickTopic(index) {
+        const topics = subjects[index].topics;
+        const recent = history[index];
+
+        // If the subject has too few topics to avoid repeats, just pick randomly
+        const available = topics.length > NO_REPEAT_COUNT
+            ? topics.filter(t => !recent.includes(t))
+            : topics.filter(t => t !== recent[recent.length - 1]); // at minimum avoid immediate repeat
+
+        const pool = available.length > 0 ? available : topics;
+        const pick = pool[Math.floor(Math.random() * pool.length)];
+
+        // Push to history, keep only last NO_REPEAT_COUNT entries
+        recent.push(pick);
+        if (recent.length > NO_REPEAT_COUNT) recent.shift();
+
+        return pick;
+    }
 
     function buildGrid() {
         const grid = document.getElementById('grid');
@@ -291,14 +304,13 @@
     function rollCard(index) {
         const topicEl = document.getElementById(`topic-${index}`);
         const btn = document.querySelectorAll('.roll-btn')[index];
-        const topics = subjects[index].topics;
 
         btn.classList.add('rolling');
         topicEl.classList.add('flash');
         topicEl.classList.remove('topic-placeholder');
 
         setTimeout(() => {
-            const pick = topics[Math.floor(Math.random() * topics.length)];
+            const pick = pickTopic(index);
             topicEl.textContent = pick;
             topicEl.classList.remove('flash');
             btn.classList.remove('rolling');
